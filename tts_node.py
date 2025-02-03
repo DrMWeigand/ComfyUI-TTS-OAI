@@ -1,10 +1,12 @@
 import requests
 import base64
-import torch
+import os
+import tempfile
+import uuid
 import io
-import soundfile as sf
 from pydub import AudioSegment
 import numpy as np
+import torch  # Needed to convert numpy data to torch tensor
 
 class OpenAITTS:
     @classmethod
@@ -30,11 +32,12 @@ class OpenAITTS:
             }
         }
 
+    # We now return an AUDIO type (a dictionary with waveform and sample_rate)
     RETURN_TYPES = ("AUDIO",)
     RETURN_NAMES = ("audio",)
     FUNCTION = "process_tts"
     CATEGORY = "Text-To-Speech"
-    DESCRIPTION = "Sends a TTS request to an OpenAI‑compatible API endpoint and returns audio data"
+    DESCRIPTION = "Sends a TTS request to an OpenAI‑compatible API endpoint and returns an audio dictionary"
 
     def process_tts(self, text, model, voice, api_key, url, response_format, return_audio):
         # Prepare the payload as expected by the TTS API.
@@ -59,11 +62,12 @@ class OpenAITTS:
 
         content_type = response.headers.get("Content-Type", "")
         
-        # Get the raw audio data
+        # Get the raw audio data from the response.
         if "application/json" in content_type:
             try:
                 data = response.json()
                 if "file_path" in data:
+                    # If the API already saved the file, load its bytes.
                     with open(data["file_path"], "rb") as f:
                         audio_bytes = f.read()
                 elif "audio" in data:
@@ -76,40 +80,29 @@ class OpenAITTS:
             audio_bytes = response.content
 
         try:
+            # Process the audio in memory
             audio_io = io.BytesIO(audio_bytes)
+            # Load the audio using pydub
+            segment = AudioSegment.from_file(audio_io, format=response_format.lower())
             
-            if response_format.lower() == 'mp3':
-                # Load MP3 using pydub
-                audio = AudioSegment.from_mp3(audio_io)
-                # Convert to numpy array
-                samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
-                # Normalize
-                samples = samples / 32768.0
-                # Reshape if stereo
-                if audio.channels == 2:
-                    samples = samples.reshape((-1, 2))
-                else:
-                    samples = samples.reshape((-1, 1))
-                # Convert to torch tensor and transpose
-                waveform = torch.from_numpy(samples).T
-                sample_rate = audio.frame_rate
-            else:  # wav
-                # Read WAV using soundfile
-                audio_io.seek(0)  # Reset buffer position
-                waveform, sample_rate = sf.read(audio_io)
-                # Convert to float32 if needed
-                if waveform.dtype != np.float32:
-                    waveform = waveform.astype(np.float32)
-                # Reshape if mono
-                if len(waveform.shape) == 1:
-                    waveform = waveform.reshape(-1, 1)
-                # Convert to torch tensor and transpose
-                waveform = torch.from_numpy(waveform).T
-
-            # Create the audio dictionary that ComfyUI expects
+            # Get raw audio data as array of samples
+            samples = segment.get_array_of_samples()
+            
+            # Convert to tensor and reshape
+            waveform = torch.tensor(samples, dtype=torch.float32)
+            # Normalize to [-1, 1]
+            waveform = waveform / (1 << (8 * segment.sample_width - 1))
+            
+            # Reshape for mono/stereo
+            if segment.channels == 1:
+                waveform = waveform.view(1, -1)  # mono: (1, samples)
+            else:
+                waveform = waveform.view(segment.channels, -1)  # stereo: (2, samples)
+            
+            # Create the audio dictionary that matches the example code's format
             audio_data = {
-                "waveform": waveform,
-                "sample_rate": sample_rate
+                "waveform": waveform.unsqueeze(0),  # Add batch dimension: (1, channels, samples)
+                "sample_rate": segment.frame_rate
             }
             
             return (audio_data,)
