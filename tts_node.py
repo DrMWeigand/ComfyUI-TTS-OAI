@@ -7,8 +7,12 @@ import io
 from pydub import AudioSegment
 import numpy as np
 import torch  # Needed to convert numpy data to torch tensor
+import torchaudio
 
 class OpenAITTS:
+    # You may choose to set a default here, but we'll override it with the file's sample rate.
+    DEFAULT_SAMPLE_RATE = 24000  
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -32,7 +36,7 @@ class OpenAITTS:
             }
         }
 
-    # We now return an AUDIO type (a dictionary with waveform and sample_rate)
+    # Return an AUDIO type (a dictionary with waveform and sample_rate)
     RETURN_TYPES = ("AUDIO",)
     RETURN_NAMES = ("audio",)
     FUNCTION = "process_tts"
@@ -52,6 +56,7 @@ class OpenAITTS:
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}" if api_key else ""
         }
+
         try:
             response = requests.post(url, json=payload, headers=headers)
         except Exception as e:
@@ -67,9 +72,7 @@ class OpenAITTS:
             try:
                 data = response.json()
                 if "file_path" in data:
-                    # If the API already saved the file, load its bytes.
-                    with open(data["file_path"], "rb") as f:
-                        audio_bytes = f.read()
+                    audio_bytes = open(data["file_path"], "rb").read()
                 elif "audio" in data:
                     audio_bytes = base64.b64decode(data["audio"])
                 else:
@@ -80,29 +83,26 @@ class OpenAITTS:
             audio_bytes = response.content
 
         try:
-            # Process the audio in memory
-            audio_io = io.BytesIO(audio_bytes)
-            # Load the audio using pydub
-            segment = AudioSegment.from_file(audio_io, format=response_format.lower())
+            # Create a BytesIO buffer with the audio data
+            audio_buffer = io.BytesIO(audio_bytes)
             
-            # Get raw audio data as array of samples
-            samples = segment.get_array_of_samples()
+            # Load audio using torchaudio
+            waveform, sample_rate = torchaudio.load(
+                audio_buffer,
+                format=response_format.lower()
+            )
             
-            # Convert to tensor and reshape
-            waveform = torch.tensor(samples, dtype=torch.float32)
-            # Normalize to [-1, 1]
-            waveform = waveform / (1 << (8 * segment.sample_width - 1))
+            # Debug info
+            print(f"Loaded audio: shape={waveform.shape}, sample_rate={sample_rate}")
             
-            # Reshape for mono/stereo
-            if segment.channels == 1:
-                waveform = waveform.view(1, -1)  # mono: (1, samples)
-            else:
-                waveform = waveform.view(segment.channels, -1)  # stereo: (2, samples)
+            # Add batch dimension if not present
+            if waveform.dim() == 2:
+                waveform = waveform.unsqueeze(0)
             
-            # Create the audio dictionary that matches the example code's format
+            # Create the audio dictionary
             audio_data = {
-                "waveform": waveform.unsqueeze(0),  # Add batch dimension: (1, channels, samples)
-                "sample_rate": segment.frame_rate
+                "waveform": waveform,
+                "sample_rate": sample_rate
             }
             
             return (audio_data,)
