@@ -14,10 +14,14 @@ class OpenAITTS:
                     "default": "http://localhost:3001/v1/audio/speech",
                     "label": "TTS Endpoint URL"
                 }),
-                "response_format": ("STRING", {
-                    "default": "mp3",
-                    "label": "Audio Format (mp3/wav)"
-                }),
+                "response_format": (
+                    "ENUM",
+                    {
+                        "choices": ["mp3", "wav"],
+                        "default": "mp3",
+                        "label": "Response Format (mp3/wav)"
+                    }
+                ),
                 "return_audio": ("BOOLEAN", {
                     "default": True,
                     "label": "Return Audio Directly (True) or Write to Disk (False)"
@@ -25,11 +29,13 @@ class OpenAITTS:
             }
         }
 
-    RETURN_TYPES = ("AUDIO",)
-    RETURN_NAMES = ("audio",)
+    # The node returns a tuple:
+    #   audio_base64: a base64 encoded version of the raw audio (if returned directly)
+    #   file_path: a file path where the audio is stored (if written to disk)
+    RETURN_TYPES = ("STRING", "STRING")
     FUNCTION = "process_tts"
     CATEGORY = "Text-To-Speech"
-    DESCRIPTION = "Sends a TTS request to an OpenAI‑compatible API endpoint and returns audio data"
+    DESCRIPTION = "Sends a TTS request to an OpenAI‑compatible API endpoint and returns either base64‑encoded audio or a file path."
 
     def process_tts(self, text, model, voice, api_key, url, response_format, return_audio):
         # Prepare the payload as expected by the TTS API.
@@ -38,8 +44,9 @@ class OpenAITTS:
             "input": text,
             "voice": voice,
             "return_audio": return_audio,
-            "response_format": response_format.lower()
+            "response_format": response_format.lower()  # ensure lowercase for compatibility
         }
+        # Prepare headers, adding an Authorization header if an API key is provided.
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}" if api_key else ""
@@ -54,24 +61,20 @@ class OpenAITTS:
 
         content_type = response.headers.get("Content-Type", "")
         
-        audio_data = {
-            "format": response_format,
-            "data": None,
-            "path": None
-        }
-
         if "application/json" in content_type:
+            # The API returned a JSON response. This is expected when return_audio is false.
             try:
                 data = response.json()
-                if "file_path" in data:
-                    audio_data["path"] = data["file_path"]
-                elif "audio" in data:
-                    audio_data["data"] = data["audio"]
             except Exception as e:
                 raise Exception("Failed to parse JSON response: " + str(e))
+            audio_base64 = data.get("audio", "")
+            file_path = data.get("file_path", "")
+            return audio_base64, file_path
         elif "audio" in content_type:
-            audio_data["data"] = base64.b64encode(response.content).decode("utf-8")
+            # The API returned raw binary audio. Base64-encode it for node compatibility.
+            audio_data = response.content
+            audio_base64 = base64.b64encode(audio_data).decode("utf-8")
+            return audio_base64, ""
         else:
-            raise Exception("Unexpected response Content-Type: " + content_type)
-
-        return (audio_data,) 
+            # Unexpected response type.
+            raise Exception("Unexpected response Content-Type: " + content_type) 
