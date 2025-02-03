@@ -1,5 +1,10 @@
 import requests
 import base64
+import torch
+import io
+import soundfile as sf
+from pydub import AudioSegment
+import numpy as np
 
 class OpenAITTS:
     @classmethod
@@ -54,24 +59,60 @@ class OpenAITTS:
 
         content_type = response.headers.get("Content-Type", "")
         
-        audio_data = {
-            "format": response_format,
-            "data": None,
-            "path": None
-        }
-
+        # Get the raw audio data
         if "application/json" in content_type:
             try:
                 data = response.json()
                 if "file_path" in data:
-                    audio_data["path"] = data["file_path"]
+                    with open(data["file_path"], "rb") as f:
+                        audio_bytes = f.read()
                 elif "audio" in data:
-                    audio_data["data"] = data["audio"]
+                    audio_bytes = base64.b64decode(data["audio"])
+                else:
+                    raise Exception("No audio data in response")
             except Exception as e:
                 raise Exception("Failed to parse JSON response: " + str(e))
-        elif "audio" in content_type:
-            audio_data["data"] = base64.b64encode(response.content).decode("utf-8")
         else:
-            raise Exception("Unexpected response Content-Type: " + content_type)
+            audio_bytes = response.content
 
-        return (audio_data,) 
+        try:
+            audio_io = io.BytesIO(audio_bytes)
+            
+            if response_format.lower() == 'mp3':
+                # Load MP3 using pydub
+                audio = AudioSegment.from_mp3(audio_io)
+                # Convert to numpy array
+                samples = np.array(audio.get_array_of_samples(), dtype=np.float32)
+                # Normalize
+                samples = samples / 32768.0
+                # Reshape if stereo
+                if audio.channels == 2:
+                    samples = samples.reshape((-1, 2))
+                else:
+                    samples = samples.reshape((-1, 1))
+                # Convert to torch tensor and transpose
+                waveform = torch.from_numpy(samples).T
+                sample_rate = audio.frame_rate
+            else:  # wav
+                # Read WAV using soundfile
+                audio_io.seek(0)  # Reset buffer position
+                waveform, sample_rate = sf.read(audio_io)
+                # Convert to float32 if needed
+                if waveform.dtype != np.float32:
+                    waveform = waveform.astype(np.float32)
+                # Reshape if mono
+                if len(waveform.shape) == 1:
+                    waveform = waveform.reshape(-1, 1)
+                # Convert to torch tensor and transpose
+                waveform = torch.from_numpy(waveform).T
+
+            # Create the audio dictionary that ComfyUI expects
+            audio_data = {
+                "waveform": waveform,
+                "sample_rate": sample_rate
+            }
+            
+            return (audio_data,)
+            
+        except Exception as e:
+            raise Exception(f"Failed to process audio data: {e}") 
