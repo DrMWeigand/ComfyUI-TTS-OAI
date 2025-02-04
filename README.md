@@ -1,6 +1,6 @@
 # ComfyUI-TTS-OAI-API
 
-A custom [ComfyUI](https://github.com/comfyanonymous/ComfyUI) node for interfacing with an OpenAI‑compatible TTS API endpoint. This node is designed to produce audio output and supports voice combining by allowing you to supply comma‑separated voice identifiers (and optional weights).
+A custom [ComfyUI](https://github.com/comfyanonymous/ComfyUI) node for interfacing with an OpenAI‑compatible TTS API endpoint. This node is designed for flexible TTS integration. When using the official OpenAI API, it can produce audio in various formats. However, when using the non‑official Kokoros self‑hosted endpoint, the node supports only MP3 and WAV formats but provides a voice combining feature through comma‑separated voice identifiers (with optional weights)—a feature not available on the official API.
 
 > **Important Note:**  
 > When using the non‑official Kokoros self‑hosted TTS endpoint (see below), only the **mp3** and **wav** formats are supported. In contrast, the official OpenAI API may support additional formats.
@@ -13,8 +13,8 @@ A custom [ComfyUI](https://github.com/comfyanonymous/ComfyUI) node for interfaci
 - **Audio Format Options for Kokoros:**  
   If using the Kokoros endpoint, you must select **mp3** or **wav** as the output format. Other endpoints (like the official OpenAI API) may allow additional formats.
   
-- **Voice Combining:**  
-  The `voice` parameter accepts either a single voice identifier or multiple identifiers in a comma‑separated list (with optional weights). For example, using Kokoros you can specify `"af_sky,af_nicole.5"` to blend voices. Note that this voice‑combining feature is implemented in Kokoros and may differ when using other endpoints.
+- **Voice Combining (Kokoros Only):**  
+  When using the non‑official Kokoros self‑hosted TTS endpoint, the `voice` parameter supports multiple comma‑separated voice identifiers (with optional weights) for blending voices. For example, you can specify `"af_sky,af_nicole.5"` to blend voices. Other endpoints (such as the official OpenAI API) do not support voice combination and accept only a single voice identifier.
   
 - **Direct Audio Integration:**  
   Returns an audio dictionary containing the waveform tensor and sample rate, ready for processing by other ComfyUI audio nodes.
