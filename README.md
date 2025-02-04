@@ -107,11 +107,3 @@ This project is licensed under the terms defined in the `LICENSE` file.
 ## Contributing
 
 Contributions, improvements, and bug fixes are welcome. Please submit pull requests or open issues on GitHub.
-
-## Acknowledgements
-
-- [Kokoros](https://github.com/DrMWeigand/Kokoros) by DrMWeigand – for providing a self‑hosted OpenAI‑compatible TTS endpoint solution.
-- The ComfyUI community for developing an extensible framework.
-- Open-source libraries such as Torch, torchaudio, and pydub.
-
-
