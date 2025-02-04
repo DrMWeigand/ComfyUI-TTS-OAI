@@ -18,4 +18,4 @@ Repository = "https://github.com/yourusername/ComfyUI-TTS-OAI-API"
 [tool.comfy]
 PublisherId = "drunreal"
 DisplayName = "ComfyUI-TTS-OAI-API"
-Icon = "" 
+Icon = "https://www.mws.biz/wp-content/uploads/2021/02/cropped-MWSoftwareFavicon-1-180x180.png" 
