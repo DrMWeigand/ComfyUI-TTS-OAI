@@ -1,0 +1,21 @@
+[project]
+name = "comfyui-openai-tts"
+description = "A ComfyUI node for interfacing with an OpenAI‑compatible TTS API endpoint."
+version = "1.0.0"
+license = { file = "LICENSE" }
+dependencies = [
+    "torch",
+    "torchaudio",
+    "pydub",
+    "numpy",
+    "requests",
+]
+
+[project.urls]
+Repository = "https://github.com/yourusername/ComfyUI-TTS-OAI-API"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = "drunreal"
+DisplayName = "ComfyUI-TTS-OAI-API"
+Icon = "" 
