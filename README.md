@@ -70,9 +70,6 @@ A custom [ComfyUI](https://github.com/comfyanonymous/ComfyUI) node for interfaci
      
    - **response_format:**  
      For Kokoros, choose either `"mp3"` or `"wav"`. If using another endpoint (e.g., the official OpenAI API), other formats might be supported.
-     
-   - **return_audio:**  
-     Determines whether to directly return the audio (via an internal AUDIO type) or to write the audio to disk.
 
 3. **Connecting in ComfyUI:**  
    Connect the output of the **OpenAI TTS** node to an audio preview or processing node. The node outputs an AUDIO dictionary with these keys:
@@ -100,7 +97,6 @@ For those interested in self-hosting an OpenAI‑compatible TTS endpoint:
 - **api_key:** `""` (or your API key)
 - **url:** `"http://localhost:3001/v1/audio/speech"`
 - **response_format:** `"mp3"`
-- **return_audio:** `True`
 
 This configuration sends the text to your self‑hosted Kokoros endpoint, which returns an MP3 file. The node processes this file into an audio waveform for playback or additional processing in ComfyUI.
 

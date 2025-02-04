@@ -28,10 +28,6 @@ class OpenAITTS:
                 "response_format": ("STRING", {
                     "default": "mp3",
                     "label": "Audio Format (mp3/wav)"
-                }),
-                "return_audio": ("BOOLEAN", {
-                    "default": True,
-                    "label": "Return Audio Directly (True) or Write to Disk (False)"
                 })
             }
         }
@@ -43,13 +39,13 @@ class OpenAITTS:
     CATEGORY = "Text-To-Speech"
     DESCRIPTION = "Sends a TTS request to an OpenAI‑compatible API endpoint and returns an audio dictionary"
 
-    def process_tts(self, text, model, voice, api_key, url, response_format, return_audio):
+    def process_tts(self, text, model, voice, api_key, url, response_format):
         # Prepare the payload as expected by the TTS API.
         payload = {
             "model": model,
             "input": text,
             "voice": voice,
-            "return_audio": return_audio,
+            "return_audio": True,
             "response_format": response_format.lower()
         }
         headers = {
