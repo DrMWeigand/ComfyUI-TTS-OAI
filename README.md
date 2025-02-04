@@ -1,15 +1,23 @@
 # ComfyUI-TTS-OAI-API
 
-A custom [ComfyUI](https://github.com/comfyanonymous/ComfyUI) node for interfacing with an OpenAI‑compatible TTS API endpoint. This node is designed to produce audio output in either MP3 or WAV format and includes support for voice combining using comma-separated voice identifiers.
+A custom [ComfyUI](https://github.com/comfyanonymous/ComfyUI) node for interfacing with an OpenAI‑compatible TTS API endpoint. This node is designed to produce audio output and supports voice combining by allowing you to supply comma‑separated voice identifiers (and optional weights).
 
-> **Note:** This project is best used in conjunction with a self-hosted TTS endpoint. We recommend using the [Kokoros](https://github.com/DrMWeigand/Kokoros) project, which provides an easily deployable OpenAI‑compatible TTS API. Follow the instructions in the Kokoros repository to set up your own endpoint.
+> **Important Note:**  
+> When using the non‑official Kokoros self‑hosted TTS endpoint (see below), only the **mp3** and **wav** formats are supported. In contrast, the official OpenAI API may support additional formats.
 
 ## Features
 
-- **OpenAI-Compatible TTS:** Send text to a self-hosted (or remote) TTS endpoint that conforms to OpenAI’s API format.
-- **Audio Format Options:** Currently supports only **mp3** and **wav** formats.
-- **Voice Combining:** The `voice` parameter accepts a single voice identifier or multiple identifiers (separated by commas) for voice blending.
-- **Direct Audio Integration:** Returns an audio dictionary containing the waveform tensor and sample rate for seamless integration with other ComfyUI audio processing nodes.
+- **OpenAI‑Compatible TTS:**  
+  Send text to either the official OpenAI endpoint or a self‑hosted alternative (such as Kokoros) that conforms to OpenAI's API format.
+  
+- **Audio Format Options for Kokoros:**  
+  If using the Kokoros endpoint, you must select **mp3** or **wav** as the output format. Other endpoints (like the official OpenAI API) may allow additional formats.
+  
+- **Voice Combining:**  
+  The `voice` parameter accepts either a single voice identifier or multiple identifiers in a comma‑separated list (with optional weights). For example, using Kokoros you can specify `"af_sky,af_nicole.5"` to blend voices. Note that this voice‑combining feature is implemented in Kokoros and may differ when using other endpoints.
+  
+- **Direct Audio Integration:**  
+  Returns an audio dictionary containing the waveform tensor and sample rate, ready for processing by other ComfyUI audio nodes.
 
 ## Requirements
 
@@ -20,79 +28,81 @@ A custom [ComfyUI](https://github.com/comfyanonymous/ComfyUI) node for interfaci
   - `numpy`
   - `requests`
   
-  You can install these via pip:
-  
+  Install them via pip:
+
   ```bash
   pip install torch torchaudio pydub numpy requests
   ```
 
 - **FFmpeg:**  
-  [pydub](https://github.com/jiaaro/pydub) requires FFmpeg to be installed on your system. Follow the [FFmpeg installation guide](https://ffmpeg.org/download.html) for your platform.
+  [pydub](https://github.com/jiaaro/pydub) requires FFmpeg to be installed. Follow the [FFmpeg installation guide](https://ffmpeg.org/download.html) for your platform.
 
 ## Installation
 
-1. Place the `tts_node.py` file (and the accompanying `__init__.py`) into your ComfyUI custom nodes directory.
-2. Ensure that the dependencies from the **Requirements** section are installed.
-3. Configure your `pyproject.toml` as needed (example provided in the repository).
+1. Place the `tts_node.py` file and its accompanying `__init__.py` into your ComfyUI custom nodes directory.
+2. Ensure that all dependencies listed above are installed.
+3. Configure your `pyproject.toml` as needed (an example is provided in the repository).
 
 ## Usage
 
 1. **Configuration:**  
-   Launch ComfyUI and open your node editor. Your new node, **OpenAI TTS**, should appear (with the display name "ComfyUI-TTS-OAI-API").
-
+   Launch ComfyUI and open your node editor. Your node, **OpenAI TTS** (displayed as "ComfyUI-TTS-OAI-API"), should now be available.
+   
 2. **Parameters:**  
    - **text:**  
-     The text string you wish to convert to speech.
+     The text you wish to convert to speech.
      
    - **model:**  
-     Specify the TTS model identifier as required by your endpoint.
+     Specify the TTS model identifier required by your endpoint.
      
    - **voice:**  
-     A string representing the desired voice. You may provide a single identifier (default is `"af_sky"`) or a comma-separated list (e.g., `"voice1,voice2"`) to combine voices.  
+     A string representing the voice. Supply a single voice identifier (default `"af_sky"`) or, for the Kokoros endpoint, a comma‑separated list with optional weights (e.g., `"af_sky.4,af_nicole.5"`) for voice blending.
      
-     > **Voice Combining:** The endpoint supports voice blending by reading multiple voice IDs. Only the MP3 and WAV formats are supported. Ensure that you only use these two formats in the `response_format` parameter.
+     > **Voice Combining:**  
+     When using the Kokoros endpoint, multiple voice IDs (with or without weights) are supported. The endpoint blends the voices accordingly. This feature may not apply (or may take a different format) if using the official OpenAI API.
      
    - **api_key:**  
-     Your API key for authorization, if required.
+     Your API key for authentication, if required.
      
    - **url:**  
-     The URL endpoint for your TTS service. For a self-hosted solution, you can set it to something like:  
+     The URL for your TTS service. For a self‑hosted solution (using Kokoros), a typical URL might be:  
      `http://localhost:3001/v1/audio/speech`
      
    - **response_format:**  
-     Specify the output format: either `"mp3"` or `"wav"`.
+     For Kokoros, choose either `"mp3"` or `"wav"`. If using another endpoint (e.g., the official OpenAI API), other formats might be supported.
      
    - **return_audio:**  
-     Boolean flag to indicate whether to directly return the audio (as an internal AUDIO type) or to write the audio to disk.
+     Determines whether to directly return the audio (via an internal AUDIO type) or to write the audio to disk.
 
 3. **Connecting in ComfyUI:**  
-   Once configured, connect the output of the **OpenAI TTS** node to an audio preview or processing node. The output is an AUDIO dictionary with the following keys:
-   - `waveform`: A torch tensor containing the audio samples (normalized to the range [-1, 1]).
-   - `sample_rate`: The sample rate at which the audio was produced (as reported by the endpoint).
+   Connect the output of the **OpenAI TTS** node to an audio preview or processing node. The node outputs an AUDIO dictionary with these keys:
+   - `waveform`: A torch tensor with normalized audio samples in the range [-1, 1].
+   - `sample_rate`: The sample rate at which the audio is produced (as reported by the endpoint).
 
 ## Self-Hosting with Kokoros
 
-For those who wish to self-host an OpenAI‑compatible TTS endpoint:
+For those interested in self-hosting an OpenAI‑compatible TTS endpoint:
 
 - **Kokoros Project:**  
-  Check out the [Kokoros repository](https://github.com/DrMWeigand/Kokoros) for a full implementation of a self-hosted TTS endpoint written in Rust. The project provides all necessary instructions to deploy your own API endpoint.
+  Visit the [Kokoros repository](https://github.com/DrMWeigand/Kokoros) for a complete implementation of a self‑hosted TTS endpoint built in Rust. This project provides detailed instructions for deploying your own API endpoint.
+  
+- **Format Limitation:**  
+  Note that when using Kokoros, the endpoint supports only MP3 and WAV output. Make sure to select one of these formats in the `response_format` parameter.
   
 - **Endpoint URL:**  
-  After setting up Kokoros, update the `url` parameter in the **OpenAI TTS** node with your server’s address (e.g., `http://<your-server-ip>:3001/v1/audio/speech`).
+  After setting up Kokoros, update the `url` parameter in the node (e.g., `http://<your-server-ip>:3001/v1/audio/speech`).
 
-## Example
-
-Below is an example configuration for the node using the Kokoros server:
+## Example Configuration Using Kokoros
 
 - **text:** `"Hello, world!"`
 - **model:** `"default_tts_model"`
-- **voice:** `"af_sky"`
-- **api_key:** `""` (or your valid API key)
+- **voice:** `"af_sky,af_nicole.5"`
+- **api_key:** `""` (or your API key)
 - **url:** `"http://localhost:3001/v1/audio/speech"`
 - **response_format:** `"mp3"`
 - **return_audio:** `True`
 
-This setup sends the text to your TTS endpoint. The endpoint returns an audio file in MP3 format, which is then processed into an audio waveform, ready for playback or further processing in ComfyUI.
+This configuration sends the text to your self‑hosted Kokoros endpoint, which returns an MP3 file. The node processes this file into an audio waveform for playback or additional processing in ComfyUI.
 
 ## License
 
@@ -100,10 +110,12 @@ This project is licensed under the terms defined in the `LICENSE` file.
 
 ## Contributing
 
-Contributions, improvements, and bug fixes are welcome - please submit pull requests or open issues on GitHub.
+Contributions, improvements, and bug fixes are welcome. Please submit pull requests or open issues on GitHub.
 
 ## Acknowledgements
 
-- [Kokoros](https://github.com/DrMWeigand/Kokoros) by DrMWeigand – for providing a self-hosted OpenAI-compatible TTS endpoint solution.
-- The ComfyUI community for creating an extensible framework that makes custom node integration simple.
+- [Kokoros](https://github.com/DrMWeigand/Kokoros) by DrMWeigand – for providing a self‑hosted OpenAI‑compatible TTS endpoint solution.
+- The ComfyUI community for developing an extensible framework.
 - Open-source libraries such as Torch, torchaudio, and pydub.
+
+
