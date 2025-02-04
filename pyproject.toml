@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/yourusername/ComfyUI-TTS-OAI-API"
+Repository = "https://github.com/DrMWeigand/ComfyUI-TTS-OAI-API"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
